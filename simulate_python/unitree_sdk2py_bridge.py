@@ -52,7 +52,7 @@ class UnitreeSdk2Bridge:
         self.lowStateThread = RecurrentThread(
             interval=self.dt, target=self.PublishLowState, name="sim_lowstate"
         )
-        self.lowStateThread.Start()
+        # self.lowStateThread.Start()
 
         self.high_state = unitree_go_msg_dds__SportModeState_()
         self.high_state_puber = ChannelPublisher(TOPIC_HIGHSTATE, SportModeState_)

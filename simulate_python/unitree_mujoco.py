@@ -3,6 +3,8 @@ import mujoco
 import mujoco.viewer
 from threading import Thread
 import threading
+import numpy as np
+from icecream import ic
 
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 from unitree_sdk2py_bridge import UnitreeSdk2Bridge, ElasticBand
@@ -16,10 +18,18 @@ mj_model = mujoco.MjModel.from_xml_path(config.ROBOT_SCENE)
 mj_data = mujoco.MjData(mj_model)
 
 
+left_knee = mj_model.joint("left_knee_joint").id
+left_elbow = mj_model.joint("left_elbow_joint").id
+
 if config.ENABLE_ELASTIC_BAND:
     elastic_band = ElasticBand()
+
     if config.ROBOT=="h1":
         band_attached_link=mj_model.body('torso_link').id
+        # band_attached_link2=mj_model.body('2torso_link').id
+    elif config.ROBOT=="h2":
+        band_attached_link=mj_model.body('torso_link').id
+        band_attached_link2=mj_model.body('2torso_link').id
     else:
         band_attached_link=mj_model.body('base_link').id
     viewer = mujoco.viewer.launch_passive(
@@ -44,6 +54,8 @@ def SimulationThread():
         unitree.SetupJoystick()
     if config.PRINT_SCENE_INFORMATION:
         unitree.PrintSceneInformation()
+    
+
         
     while viewer.is_running():
         step_start = time.perf_counter()
@@ -54,9 +66,21 @@ def SimulationThread():
             if elastic_band.enable:
                 mj_data.xfrc_applied[band_attached_link, :3] = elastic_band.Advance(
                     mj_data.qpos[:3], mj_data.qvel[:3])
+                # if config.ROBOT=="h2":
+                #     mj_data.xfrc_applied[band_attached_link2, :3] = elastic_band.Advance(
+                #         mj_data.qpos[27:30], mj_data.qvel[27:30])
+        
+            # ic(mj_data.qpos[27:30])
+            # ic(mj_data.qpos[:3])
+                    
         mujoco.mj_step(mj_model, mj_data)
 
         locker.release()
+
+        # print(mj_data.qvel[left_elbow])
+        # print(mj_data.ctrl)
+        mj_data.ctrl[left_knee+1] = 10
+        # mj_data.joint("left_hip_roll_joint").ctrl = 0.3
 
         time_until_next_step = mj_model.opt.timestep - (time.perf_counter() -
                                                         step_start)
